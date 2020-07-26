@@ -28,6 +28,7 @@ import baritone.pathing.movement.Moves;
 import baritone.utils.pathing.BetterWorldBorder;
 import baritone.utils.pathing.Favoring;
 import baritone.utils.pathing.MutableMoveResult;
+import net.minecraft.util.math.RayTraceResult;
 
 import java.util.Optional;
 
@@ -138,24 +139,42 @@ public final class AStarPathFinder extends AbstractNodeCostSearch {
                     actionCost *= favoring.calculate(hashCode);
                 }
                 PathNode neighbor = getNodeAtPosition(res.x, res.y, res.z, hashCode);
-                double tentativeCost = currentNode.cost + actionCost;
-                if (neighbor.cost - tentativeCost > minimumImprovement) {
-                    neighbor.previous = currentNode;
-                    neighbor.cost = tentativeCost;
-                    neighbor.combinedCost = tentativeCost + neighbor.estimatedCostToGoal;
-                    if (neighbor.isOpen()) {
-                        openSet.update(neighbor);
-                    } else {
-                        openSet.insert(neighbor);//dont double count, dont insert into open set if it's already there
+                double currentToNeighbor = currentNode.posVec.distanceTo(neighbor.posVec);
+                double previousToNeighbor;
+                if (currentNode == startNode) {
+                    previousToNeighbor = currentToNeighbor;
+                }
+                else {
+                    previousToNeighbor = currentNode.previous.posVec.distanceTo(neighbor.posVec);
+                }
+                //checking line of sight (might need different method)
+                if (currentNode.previous != null && calcContext.world.rayTraceBlocks(currentNode.previous.posVec, neighbor.posVec).type == RayTraceResult.Type.MISS){
+                    if (currentNode.previous.cost + previousToNeighbor < neighbor.cost){ //maybe take into account minimum improvement
+                        neighbor.cost = currentNode.previous.cost + previousToNeighbor;
+                        neighbor.combinedCost = neighbor.cost + neighbor.estimatedCostToGoal;
+                        neighbor.previous = currentNode.previous;
                     }
-                    for (int i = 0; i < COEFFICIENTS.length; i++) {
-                        double heuristic = neighbor.estimatedCostToGoal + neighbor.cost / COEFFICIENTS[i];
-                        if (bestHeuristicSoFar[i] - heuristic > minimumImprovement) {
-                            bestHeuristicSoFar[i] = heuristic;
-                            bestSoFar[i] = neighbor;
-                            if (failing && getDistFromStartSq(neighbor) > MIN_DIST_PATH * MIN_DIST_PATH) {
-                                failing = false;
-                            }
+                }
+                else {
+                    if (currentNode.cost + currentToNeighbor < neighbor.cost){ //maybe take into account minimum improvement
+                        neighbor.cost = currentNode.cost + currentToNeighbor;
+                        neighbor.combinedCost = neighbor.cost + neighbor.estimatedCostToGoal;
+                        neighbor.previous = currentNode;
+                    }
+                }
+                if (neighbor.isOpen()) {
+                    openSet.update(neighbor);
+                } else {
+                    openSet.insert(neighbor);//dont double count, dont insert into open set if it's already there
+                }
+                for (int i = 0; i < COEFFICIENTS.length; i++) {
+                    double heuristic = neighbor.estimatedCostToGoal + neighbor.cost / COEFFICIENTS[i];
+                    if (bestHeuristicSoFar[i] - heuristic > minimumImprovement) {
+                        bestHeuristicSoFar[i] = heuristic;
+                        bestSoFar[i] = neighbor;
+                        if (failing && getDistFromStartSq(neighbor) > MIN_DIST_PATH * MIN_DIST_PATH) {
+                            failing = false;
+
                         }
                     }
                 }

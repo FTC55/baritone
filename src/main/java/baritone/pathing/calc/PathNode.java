@@ -20,6 +20,7 @@ package baritone.pathing.calc;
 import baritone.api.pathing.goals.Goal;
 import baritone.api.pathing.movement.ActionCosts;
 import baritone.api.utils.BetterBlockPos;
+import net.minecraft.util.math.Vec3d;
 
 /**
  * A node in the path, containing the cost and steps to get to it.
@@ -34,6 +35,7 @@ public final class PathNode {
     public final int x;
     public final int y;
     public final int z;
+    public final Vec3d posVec;
 
     /**
      * Cached, should always be equal to goal.heuristic(pos)
@@ -74,6 +76,7 @@ public final class PathNode {
         this.x = x;
         this.y = y;
         this.z = z;
+        this.posVec = new Vec3d(x, y, z);
     }
 
     public boolean isOpen() {
